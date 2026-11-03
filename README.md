@@ -172,6 +172,26 @@ In the UI: detail page → Revoke → confirm; the audit trail shows a single `c
 - No automated UI tests; the UI was verified manually in the browser (see decision log D2).
 - Docker files are present but untested (see "Start"). `./start.sh` is the supported path.
 
+## Time accounting
+
+All times UTC, taken from `git log` and the native AI transcript (`ai/sessions/`), unaltered.
+The AI session started at 06:33:09.
+
+| Commit | Time | Elapsed | Content |
+|---|---|---|---|
+| `2fdf3f2` | 06:49:48 | +16:39 | backend API + A1–A7 tests |
+| `bf96987` | 06:54:48 | +21:39 | UI, Docker files, Makefile |
+| `db9a5b3` | 07:09:11 | +36:02 | README, decision log |
+| `27f6511` | 07:10:51 | +37:42 | session export |
+| `ecd381b` | 07:28:16 | +55:07 | `start.sh`; Docker dropped after two failed starts |
+| `41031d4` | 07:37:43 | +64:34 | lint fixes found in the final criteria check (D5) |
+| `b472aa5` | 07:52:05 | +78:56 | `written-answers.md` (no AI) |
+
+The build and packaging were complete at +55 min. The final verification pass — which found the
+lint errors — ran over the hour by about 10 minutes (roughly half of that spent on Docker
+retries before dropping it). Section 6 was then written separately, as the brief's own schedule
+places it. Nothing was backdated or squashed to fit the limit.
+
 ## AI interaction evidence and completeness declaration
 
 - `ai/sessions/` — native Claude Code JSONL transcript(s) of every session used, including tool
