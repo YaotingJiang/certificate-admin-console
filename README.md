@@ -170,6 +170,12 @@ In the UI: detail page → Revoke → confirm; the audit trail shows a single `c
   "no login" shortcut the brief allows and would not exist in production.
 - Audit trail is shown on the detail page only; there is no global audit view.
 - No automated UI tests; the UI was verified manually in the browser (see decision log D2).
+- **Docker startup not end-to-end verified on the development machine.** Both images build, but
+  `docker compose up` left the containers stuck in `Created` because of a local Docker Desktop
+  networking fault (`vmnetd`) on that machine that needs an admin-level restart. The app was
+  verified via the equivalent local path (`uvicorn` + `next dev`, i.e. `make dev`). The compose
+  files are straightforward; please treat `docker compose up --build` as untested by the author
+  and fall back to `make dev` if it misbehaves.
 
 ## AI interaction evidence and completeness declaration
 
