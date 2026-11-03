@@ -2,53 +2,53 @@
 
 import { useEffect, useState } from "react";
 import { api, ApiError, type BulkIssueResult } from "@/lib/api";
-import { useActor } from "@/lib/actor";
 
 type Course = { id: number; title: string };
 type Phase = "idle" | "pending" | "done" | "error";
 
-export function BulkIssuePanel({ onIssued }: { onIssued: () => void }) {
-  const { actor } = useActor();
-  const [courses, setCourses] = useState<Course[]>([]);
+/** Mounted with key={actor} by the parent, so a tenant switch resets all of this state. */
+export function BulkIssuePanel({ actor, onIssued }: { actor: string; onIssued: () => void }) {
+  const [courses, setCourses] = useState<Course[] | null>(null);
   const [courseId, setCourseId] = useState<number | "">("");
-  // One key per logical attempt: reused on retry after a failure, rotated after success (A2/A3).
-  // Generated in an effect, not during render, so Next's prerender sees no unstable value.
+  // One key per logical attempt: created on first submit, reused on retry after a failure,
+  // cleared (so a fresh one is made) after success or when the course changes (A2/A3).
   const [idemKey, setIdemKey] = useState("");
   const [phase, setPhase] = useState<Phase>("idle");
   const [result, setResult] = useState<BulkIssueResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!actor) return;
-    setResult(null);
-    setError(null);
-    setPhase("idle");
-    setIdemKey(crypto.randomUUID());
+    let cancelled = false;
     api<Course[]>("/api/courses", {}, actor)
       .then((c) => {
+        if (cancelled) return;
         setCourses(c);
         setCourseId(c[0]?.id ?? "");
       })
-      .catch((e) => setError(e.message));
+      .catch((e: Error) => !cancelled && setError(e.message));
+    return () => {
+      cancelled = true;
+    };
   }, [actor]);
 
   const submit = async () => {
-    if (courseId === "" || !idemKey || phase === "pending") return;
+    if (courseId === "" || phase === "pending") return;
+    const key = idemKey || crypto.randomUUID();
+    setIdemKey(key);
     setPhase("pending");
     setError(null);
     try {
-      const r = await api<BulkIssueResult>("/api/certificates/bulk-issue", {
-        method: "POST",
-        headers: { "Idempotency-Key": idemKey },
-        body: JSON.stringify({ course_id: courseId }),
-      });
+      const r = await api<BulkIssueResult>(
+        "/api/certificates/bulk-issue",
+        { method: "POST", headers: { "Idempotency-Key": key }, body: JSON.stringify({ course_id: courseId }) },
+        actor,
+      );
       setResult(r);
       setPhase("done");
-      setIdemKey(crypto.randomUUID());
+      setIdemKey("");
       onIssued();
     } catch (e) {
-      const msg = e instanceof ApiError ? `${e.code}: ${e.message}` : (e as Error).message;
-      setError(msg);
+      setError(e instanceof ApiError ? `${e.code}: ${e.message}` : (e as Error).message);
       setPhase("error");
     }
   };
@@ -60,15 +60,17 @@ export function BulkIssuePanel({ onIssued }: { onIssued: () => void }) {
         <select
           className="rounded border border-gray-300 px-2 py-1"
           value={courseId}
-          disabled={phase === "pending"}
+          disabled={phase === "pending" || courses === null}
           onChange={(e) => {
             setCourseId(Number(e.target.value));
-            setIdemKey(crypto.randomUUID());
+            setIdemKey("");
             setResult(null);
+            setError(null);
             setPhase("idle");
           }}
         >
-          {courses.map((c) => (
+          {courses === null && <option value="">Loading courses…</option>}
+          {courses?.map((c) => (
             <option key={c.id} value={c.id}>
               {c.title}
             </option>

@@ -5,41 +5,44 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api, type CertificateDetail } from "@/lib/api";
 import { useActor } from "@/lib/actor";
+import { StatusBadge } from "@/components/StatusBadge";
+
+type Loaded = { key: string; cert?: CertificateDetail; error?: string };
 
 export default function CertificateDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { actor, ready } = useActor();
-  const [cert, setCert] = useState<CertificateDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [revoking, setRevoking] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const requestKey = `${id}|${actor}`;
 
   useEffect(() => {
     if (!ready || !actor) return;
     let cancelled = false;
-    setLoading(true);
-    setError(null);
     api<CertificateDetail>(`/api/certificates/${id}`, {}, actor)
-      .then((c) => !cancelled && setCert(c))
-      .catch((e) => {
-        if (cancelled) return;
-        setCert(null);
-        setError(e.message);
-      })
-      .finally(() => !cancelled && setLoading(false));
+      .then((cert) => !cancelled && setLoaded({ key: requestKey, cert }))
+      .catch((e: Error) => !cancelled && setLoaded({ key: requestKey, error: e.message }));
     return () => {
       cancelled = true;
     };
-  }, [id, actor, ready]);
+  }, [id, actor, ready, requestKey]);
+
+  const current = loaded && loaded.key === requestKey ? loaded : null;
+  const loading = ready && current === null;
+  const cert = current?.cert ?? null;
+  const error = current?.error ?? null;
 
   const revoke = async () => {
     if (!cert || !confirm(`Revoke certificate ${cert.serial} for ${cert.learner_name}? This cannot be undone.`)) return;
     setRevoking(true);
-    setError(null);
+    setActionError(null);
     try {
-      setCert(await api<CertificateDetail>(`/api/certificates/${id}/revoke`, { method: "POST" }, actor));
+      const updated = await api<CertificateDetail>(`/api/certificates/${id}/revoke`, { method: "POST" }, actor);
+      setLoaded({ key: requestKey, cert: updated });
     } catch (e) {
-      setError((e as Error).message);
+      setActionError((e as Error).message);
     } finally {
       setRevoking(false);
     }
@@ -52,18 +55,13 @@ export default function CertificateDetailPage() {
       </Link>
       {loading && <p className="text-gray-500">Loading…</p>}
       {error && <p className="rounded bg-red-50 p-2 text-sm text-red-700">Error: {error}</p>}
+      {actionError && <p className="rounded bg-red-50 p-2 text-sm text-red-700">Revoke failed: {actionError}</p>}
       {cert && (
         <>
           <section className="rounded-lg border bg-white p-4">
             <div className="flex items-start justify-between">
               <h1 className="font-mono text-lg">{cert.serial}</h1>
-              <span
-                className={`rounded px-2 py-0.5 text-xs font-medium ${
-                  cert.status === "active" ? "bg-green-100 text-green-800" : "bg-gray-200 text-gray-700"
-                }`}
-              >
-                {cert.status}
-              </span>
+              <StatusBadge status={cert.status} />
             </div>
             <dl className="mt-4 grid grid-cols-[10rem_1fr] gap-y-2 text-sm">
               <dt className="text-gray-500">Learner</dt>

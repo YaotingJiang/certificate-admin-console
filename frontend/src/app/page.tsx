@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, downloadCsv, type Certificate, type Page } from "@/lib/api";
 import { useActor } from "@/lib/actor";
 import { BulkIssuePanel } from "@/components/BulkIssuePanel";
+import { StatusBadge } from "@/components/StatusBadge";
 
 type SortField = "issued_local_date" | "learner_name" | "serial" | "course_title" | "status";
 const PAGE_SIZE = 20;
@@ -17,38 +18,44 @@ const COLUMNS: { key: SortField; label: string }[] = [
   { key: "status", label: "Status" },
 ];
 
+type Loaded = { key: string; data?: Page<Certificate>; error?: string };
+
 export default function CertificateListPage() {
   const { actor, ready } = useActor();
+  if (!ready) return <p className="text-gray-500">Loading…</p>;
+  // Keyed by actor: switching tenant remounts the page and resets search/sort/paging/bulk state.
+  return <CertificateList key={actor} actor={actor} />;
+}
+
+function CertificateList({ actor }: { actor: string }) {
   const [qInput, setQInput] = useState("");
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<SortField>("issued_local_date");
   const [dir, setDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
-  const [data, setData] = useState<Page<Certificate> | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [exporting, setExporting] = useState(false);
   const [reloadTick, setReloadTick] = useState(0);
+  const [loaded, setLoaded] = useState<Loaded | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const query = new URLSearchParams({ q, sort, dir }).toString();
+  const requestKey = `${query}|${page}|${reloadTick}`;
 
   useEffect(() => {
-    if (!ready || !actor) return;
     let cancelled = false;
-    setLoading(true);
-    setError(null);
     api<Page<Certificate>>(`/api/certificates?${query}&page=${page}&page_size=${PAGE_SIZE}`, {}, actor)
-      .then((d) => !cancelled && setData(d))
-      .catch((e) => !cancelled && setError(e.message))
-      .finally(() => !cancelled && setLoading(false));
+      .then((data) => !cancelled && setLoaded({ key: requestKey, data }))
+      .catch((e: Error) => !cancelled && setLoaded({ key: requestKey, error: e.message }));
     return () => {
       cancelled = true;
     };
-  }, [actor, ready, query, page, reloadTick]);
+  }, [actor, query, page, reloadTick, requestKey]);
 
-  useEffect(() => {
-    setPage(1);
-  }, [actor, q, sort, dir]);
+  // Loading is derived: the last response is for a different request than the current one.
+  const current = loaded && loaded.key === requestKey ? loaded : null;
+  const loading = current === null;
+  const data = current?.data ?? null;
+  const error = current?.error ?? null;
 
   const refresh = useCallback(() => setReloadTick((t) => t + 1), []);
 
@@ -58,15 +65,16 @@ export default function CertificateListPage() {
       setSort(key);
       setDir(key === "issued_local_date" ? "desc" : "asc");
     }
+    setPage(1);
   };
 
   const onExport = async () => {
     setExporting(true);
-    setError(null);
+    setExportError(null);
     try {
       await downloadCsv(query);
     } catch (e) {
-      setError((e as Error).message);
+      setExportError((e as Error).message);
     } finally {
       setExporting(false);
     }
@@ -76,7 +84,7 @@ export default function CertificateListPage() {
 
   return (
     <div className="space-y-6">
-      <BulkIssuePanel onIssued={refresh} />
+      <BulkIssuePanel actor={actor} onIssued={refresh} />
 
       <section className="rounded-lg border bg-white p-4">
         <div className="mb-3 flex flex-wrap items-center gap-3">
@@ -86,6 +94,7 @@ export default function CertificateListPage() {
             onSubmit={(e) => {
               e.preventDefault();
               setQ(qInput.trim());
+              setPage(1);
             }}
           >
             <input
@@ -104,6 +113,7 @@ export default function CertificateListPage() {
                 onClick={() => {
                   setQInput("");
                   setQ("");
+                  setPage(1);
                 }}
               >
                 clear
@@ -124,6 +134,7 @@ export default function CertificateListPage() {
         </div>
 
         {error && <p className="mb-3 rounded bg-red-50 p-2 text-sm text-red-700">Error: {error}</p>}
+        {exportError && <p className="mb-3 rounded bg-red-50 p-2 text-sm text-red-700">Export failed: {exportError}</p>}
 
         <table className="w-full text-sm">
           <thead className="text-left text-xs uppercase text-gray-500">
@@ -188,9 +199,4 @@ export default function CertificateListPage() {
       </section>
     </div>
   );
-}
-
-export function StatusBadge({ status }: { status: "active" | "revoked" }) {
-  const cls = status === "active" ? "bg-green-100 text-green-800" : "bg-gray-200 text-gray-700";
-  return <span className={`rounded px-2 py-0.5 text-xs font-medium ${cls}`}>{status}</span>;
 }

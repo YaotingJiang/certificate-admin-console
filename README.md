@@ -24,6 +24,7 @@ Verification (second command):
 ```bash
 make verify        # A1–A5, A7 + list behaviour on a fresh temp DB (pytest)
 make verify-big    # A6: 100,000 rows, two exports, list during export
+cd frontend && npm run lint && npx tsc --noEmit   # frontend static checks (clean)
 ```
 
 `docker-compose.yml` and the two Dockerfiles are included but **untested** — Docker Desktop on

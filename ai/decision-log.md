@@ -54,6 +54,23 @@ All decisions below come from Claude Code session `2ed64df3-23e8-40d9-a214-02d5e
   the 60 s budget (≈1 s each locally), byte-identical output, list request succeeds mid-export.
 - **Commit**: `2fdf3f2`.
 
+## D5 — Corrected: `npm run lint` failed on the AI-written React components
+
+- **What happened**: during the final criteria check, `npm run lint` (eslint-config-next 16,
+  React Compiler rules) reported 4 errors `react-hooks/set-state-in-effect` — the list page,
+  detail page and bulk panel all called `setState` synchronously inside `useEffect` to reset
+  loading/error/page state when the actor or query changed. Type-check and runtime were fine;
+  this was a code-quality finding a reviewer would hit immediately.
+- **Correction**: loading/error are now *derived* (`loaded.key !== requestKey`) instead of set in
+  effects; the page and bulk panel are mounted with `key={actor}` so a tenant switch remounts and
+  resets state; page resets happen in the search/sort handlers; the idempotency key is created
+  lazily in the submit handler. `StatusBadge` moved out of `page.tsx` (non-page exports break
+  `next build`). Lint and `tsc --noEmit` are clean; the full UI walkthrough was repeated after
+  the change (search, empty state, sort both directions, double-click guard → one key,
+  revoke with confirmation → one audit row, actor switch, 100 k-row paging "Page 2 of 5001",
+  error state with backend down).
+- **Commit**: "fix(ui): derive loading state, key by actor — lint clean".
+
 ## D4 — Scope: Docker Compose planned as the one startup command, then dropped for `./start.sh`
 
 - **Plan** (ARCHITECTURE.md §6): `docker compose up --build` as the single startup command,
