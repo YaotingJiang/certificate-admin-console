@@ -11,7 +11,9 @@ def connect(db_path: str | None = None) -> sqlite3.Connection:
     """One connection per request/thread. Autocommit mode; writes go through write_txn()."""
     path = Path(db_path or settings.db_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(path, isolation_level=None, timeout=30)
+    # check_same_thread=False: FastAPI may run a sync dependency's setup and teardown on different
+    # worker threads. Each connection is still used by exactly one request at a time.
+    conn = sqlite3.connect(path, isolation_level=None, timeout=30, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA busy_timeout=30000")
