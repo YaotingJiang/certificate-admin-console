@@ -172,6 +172,10 @@ In the UI: detail page → Revoke → confirm; the audit trail shows a single `c
 - The course dropdown scopes the bulk operation only; the certificate list always shows every
   certificate in the tenant (search is by learner name or serial, as the brief specifies). There
   is no course filter on the list.
+- No eligibility preview before bulk issue. Enrolled learners who hold no certificate (e.g. an
+  incomplete learner) are visible only in the outcome table *after* the operation runs; nothing
+  in the UI lists a course's enrollments beforehand. The natural follow-up is a read-only
+  preview in the bulk panel that reuses the same eligibility logic as the issue itself.
 - The revoke confirmation is the browser's native `confirm()`; not a styled modal.
 - `GET /api/actors` lists both tenants' admin emails so the demo selector can work; this is the
   "no login" shortcut the brief allows and would not exist in production.
