@@ -8,19 +8,16 @@ Stack: FastAPI + SQLite (stdlib `sqlite3`, WAL) · Next.js 16 (React, TypeScript
 
 ## Start (one command)
 
-```bash
-docker compose up --build
-```
-
-Builds both images, installs the declared dependencies, creates the schema, seeds the quick-start
-data (idempotent) and starts the backend on <http://localhost:8000> and the UI on
-<http://localhost:3000>. The SQLite file lives in `backend/data/app.db` (bind-mounted).
-
-Without Docker (python3 ≥ 3.11 and node ≥ 20):
+Requires `python3` ≥ 3.11 and `node` ≥ 20.
 
 ```bash
-make dev
+./start.sh
 ```
+
+Creates a venv and installs the declared Python deps, runs `npm install`, creates the schema,
+seeds the quick-start data (idempotent) and starts the backend on <http://localhost:8000>
+(OpenAPI at `/docs`) and the UI on <http://localhost:3000>. Ctrl-C stops both. The SQLite file
+is `backend/data/app.db`. (`make dev` is an alias.)
 
 Verification (second command):
 
@@ -29,7 +26,9 @@ make verify        # A1–A5, A7 + list behaviour on a fresh temp DB (pytest)
 make verify-big    # A6: 100,000 rows, two exports, list during export
 ```
 
-With Docker: `docker compose exec backend python -m pytest -q` and `... -m big -s`.
+`docker-compose.yml` and the two Dockerfiles are included but **untested** — Docker Desktop on
+the development machine could not start containers during the sitting, so Docker was dropped as
+the startup path (see `ai/decision-log.md` D4).
 
 ## Actors
 
@@ -121,7 +120,7 @@ Sorting by `issued_local_date` and the CSV column both use the tenant-local cale
 
 **A6 Export growth**
 ```bash
-make big-data          # or: docker compose exec backend python seed.py --big EAST --rows 100000
+make big-data          # = cd backend && .venv/bin/python seed.py --big EAST --rows 100000
 time curl -s -H "X-Actor: alice@east.test" \
   "localhost:8000/api/certificates/export.csv?q=Lee&sort=learner_name&dir=asc" -o /tmp/e1.csv &
 curl -s -o /dev/null -w "%{http_code}\n" -H "X-Actor: alice@east.test" \
@@ -170,12 +169,7 @@ In the UI: detail page → Revoke → confirm; the audit trail shows a single `c
   "no login" shortcut the brief allows and would not exist in production.
 - Audit trail is shown on the detail page only; there is no global audit view.
 - No automated UI tests; the UI was verified manually in the browser (see decision log D2).
-- **Docker startup not end-to-end verified on the development machine.** Both images build, but
-  `docker compose up` left the containers stuck in `Created` because of a local Docker Desktop
-  networking fault (`vmnetd`) on that machine that needs an admin-level restart. The app was
-  verified via the equivalent local path (`uvicorn` + `next dev`, i.e. `make dev`). The compose
-  files are straightforward; please treat `docker compose up --build` as untested by the author
-  and fall back to `make dev` if it misbehaves.
+- Docker files are present but untested (see "Start"). `./start.sh` is the supported path.
 
 ## AI interaction evidence and completeness declaration
 

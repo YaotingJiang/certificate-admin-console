@@ -54,9 +54,18 @@ All decisions below come from Claude Code session `2ed64df3-23e8-40d9-a214-02d5e
   the 60 s budget (≈1 s each locally), byte-identical output, list request succeeds mid-export.
 - **Commit**: `2fdf3f2`.
 
-## D4 — Scope: Docker Compose as the one startup command, local `make dev` as fallback
+## D4 — Scope: Docker Compose planned as the one startup command, then dropped for `./start.sh`
 
-- The brief wants one documented command that installs declared deps, seeds and starts
-  everything. `docker compose up --build` does all three reproducibly; a local `make dev` is kept
-  for machines without Docker. Both are in the Makefile and README. Decided in ARCHITECTURE.md
-  §6 before implementation.
+- **Plan** (ARCHITECTURE.md §6): `docker compose up --build` as the single startup command,
+  local `make dev` as fallback — matching the candidate's usual Docker-first verification habit.
+- **What happened**: the compose files and Dockerfiles were written, but Docker Desktop on the
+  development machine could not start any container during the sitting (containers stuck in
+  `Created`, `docker compose up` hanging; restarting `com.docker.vmnetd` did not help). Two
+  retries cost ~10 minutes of the time box.
+- **Decision** (candidate's call, in words: "if docker is not working, stop using it. It takes
+  too long"): stop spending time on Docker; make the plain local path the documented one command.
+  `./start.sh` creates the venv, installs both dependency sets, seeds and starts both servers.
+  The Docker files stay in the repo, labelled untested in the README rather than deleted or
+  claimed to work.
+- **Verification**: `./start.sh` run from a clean shell; `/health` and the UI probed on 8000/3000.
+- **Commit**: see `git log` entry "chore: start.sh as the one startup command".

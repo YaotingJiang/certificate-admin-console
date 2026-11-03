@@ -9,7 +9,7 @@ Classification: **(A) standard web application** — no LLM/agent decomposition.
 |---|---|
 | Backend Go/Python/Node + SQLite/MySQL/Postgres | **FastAPI + SQLite (stdlib `sqlite3`, WAL mode)** — already scaffolded |
 | Frontend Vue 3 / React | **Next.js 15 App Router (React, TS, Tailwind)** — already scaffolded |
-| One startup command | `docker compose up --build` (installs deps, seeds demo data, starts both). Fallback: `make dev` (local venv + npm) |
+| One startup command | `./start.sh` (venv + pip, npm install, seed, start both). Docker compose files exist but are untested — Docker was dropped mid-sitting (decision log D4) |
 | Actor identification, no login | Header `X-Actor: alice@east.test` → admin → tenant. Unknown → 401 |
 | No prod auth / cloud / notifications | Out of scope. No extra features |
 | Section 6 `written-answers.md` | **Candidate-only. AI never reads, drafts, edits, or polishes it.** Recorded in `CLAUDE.md`/`AGENTS.md` |

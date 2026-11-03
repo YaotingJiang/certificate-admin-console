@@ -11,7 +11,7 @@ Certificate Admin Console — Ocean AI Labs take-home. `ARCHITECTURE.md` is the 
 ## Stack
 - Backend: FastAPI + stdlib `sqlite3` (WAL, `BEGIN IMMEDIATE` for writes), run from `backend/`.
 - Frontend: Next.js App Router (TS, Tailwind), `frontend/`.
-- Startup: `docker compose up --build`; local fallback `make dev`. Verification: `make verify`, `make verify-big`.
+- Startup: `./start.sh` (local; Docker files are untested — do not spend time on Docker). Verification: `make verify`, `make verify-big`.
 
 ## Conventions
 - Every query is tenant-scoped via the actor resolved from the `X-Actor` header.
