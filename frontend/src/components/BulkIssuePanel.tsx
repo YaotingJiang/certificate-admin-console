@@ -55,9 +55,17 @@ export function BulkIssuePanel({ actor, onIssued }: { actor: string; onIssued: (
 
   return (
     <section className="rounded-lg border bg-white p-4">
-      <h2 className="mb-3 font-semibold">Bulk issue</h2>
+      <h2 className="mb-1 font-semibold">Bulk issue</h2>
+      <p className="mb-3 text-xs text-gray-500">
+        Issues a certificate to every learner who completed the chosen course and has none yet. Learners with an
+        active or revoked certificate are skipped; revoked certificates are never re-issued automatically.
+      </p>
       <div className="flex flex-wrap items-center gap-3">
+        <label className="text-sm text-gray-600" htmlFor="bulk-course">
+          Course
+        </label>
         <select
+          id="bulk-course"
           className="rounded border border-gray-300 px-2 py-1"
           value={courseId}
           disabled={phase === "pending" || courses === null}

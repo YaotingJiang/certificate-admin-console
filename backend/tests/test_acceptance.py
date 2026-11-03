@@ -160,6 +160,23 @@ def test_a7_revocation_audit_once(client):
     assert revocations[0]["actor_email"] == "alice@east.test"
 
 
+def test_revoked_certificate_is_not_reissued_by_bulk(client):
+    """After A7, Alex Lee's Safety 101 certificate is revoked. Bulk issue must not re-issue it,
+    and must say why (distinct from already_certified)."""
+    cid = course_id(client, ALICE, "Safety 101")
+    before = db_count("SELECT COUNT(*) FROM certificates WHERE course_id=?", cid)
+    r = client.post(f"{CERTS}/bulk-issue", headers={**ALICE, "Idempotency-Key": "after-revoke-" + uuid.uuid4().hex},
+                    json={"course_id": cid})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["summary"]["issued"] == 0
+    alex = next(x for x in body["results"] if x["learner_name"] == "Alex Lee")
+    assert (alex["outcome"], alex["reason"]) == ("skipped", "certificate_revoked")
+    priya = next(x for x in body["results"] if x["learner_name"] == "Priya Nair")
+    assert (priya["outcome"], priya["reason"]) == ("skipped", "already_certified")
+    assert db_count("SELECT COUNT(*) FROM certificates WHERE course_id=?", cid) == before
+
+
 # ---------------------------------------------------------------- list UX basics
 def test_list_search_sort_paginate(client):
     page1 = list_certs(client, ALICE, page=1, page_size=2, sort="serial", dir="asc")

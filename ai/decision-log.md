@@ -71,6 +71,27 @@ All decisions below come from Claude Code session `2ed64df3-23e8-40d9-a214-02d5e
   error state with backend down).
 - **Commit**: "fix(ui): derive loading state, key by actor — lint clean".
 
+## D6 — Corrected (candidate-found): revoked certificate reported as "already_certified"
+
+- **What the candidate noticed** while testing the pushed build by hand: after revoking Alex
+  Lee's certificate and running bulk issue again, the outcome table said
+  `skipped / already_certified` and showed the *revoked* serial — the list below said
+  `revoked`. The two views disagreed about what had happened. They also asked why switching the
+  course dropdown left the certificate list unchanged.
+- **AI's first implementation** treated "has any certificate row" as "already certified", which
+  is correct for the A2/A4 duplicate guard but wrong as a user-facing reason once revocation
+  exists.
+- **Decision**: keep one-certificate-per-enrollment (no automatic re-issue — a revocation is a
+  deliberate admin action that a routine bulk run must not undo), but report it honestly as
+  `skipped / certificate_revoked`. An explicit, audited re-issue action is listed as the
+  follow-up in the README. For the second point: the course select only scopes the bulk
+  operation; the list is tenant-wide by design (the brief asks for search by learner/serial,
+  not a course filter). Added a one-line explanation under "Bulk issue" and an "(all courses in
+  this tenant)" hint on the list heading instead of adding an unrequested filter.
+- **Verification**: new test `test_revoked_certificate_is_not_reissued_by_bulk` (7/7 pass);
+  re-checked in the running UI as Bob: Alex Lee → `certificate_revoked`, no new certificate.
+- **Commit**: "fix: report revoked certificates distinctly in bulk issue; clarify course scope".
+
 ## D4 — Scope: Docker Compose planned as the one startup command, then dropped for `./start.sh`
 
 - **Plan** (ARCHITECTURE.md §6): `docker compose up --build` as the single startup command,

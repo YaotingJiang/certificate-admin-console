@@ -70,7 +70,7 @@ def bulk_issue(conn, actor: Actor, course_id: int, idempotency_key: str) -> dict
 
         rows = conn.execute(
             """SELECT e.id AS enrollment_id, e.learner_id, l.name AS learner_name, e.completed_at_utc,
-                      c.id AS cert_id, c.serial
+                      c.id AS cert_id, c.serial, c.status AS cert_status
                FROM enrollments e
                JOIN learners l ON l.id = e.learner_id
                LEFT JOIN certificates c ON c.enrollment_id = e.id
@@ -84,7 +84,10 @@ def bulk_issue(conn, actor: Actor, course_id: int, idempotency_key: str) -> dict
         for r in rows:
             serial = None
             if r["cert_id"]:
-                outcome, reason, serial = "skipped", "already_certified", r["serial"]
+                # One certificate per enrollment, ever. A revoked one is a deliberate admin action,
+                # so bulk issue never silently re-issues it; it is reported distinctly.
+                reason = "already_certified" if r["cert_status"] == "active" else "certificate_revoked"
+                outcome, serial = "skipped", r["serial"]
             elif not r["completed_at_utc"]:
                 outcome, reason = "skipped", "not_completed"
             else:

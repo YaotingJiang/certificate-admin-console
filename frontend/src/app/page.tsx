@@ -88,7 +88,9 @@ function CertificateList({ actor }: { actor: string }) {
 
       <section className="rounded-lg border bg-white p-4">
         <div className="mb-3 flex flex-wrap items-center gap-3">
-          <h2 className="font-semibold">Certificates</h2>
+          <h2 className="font-semibold">
+            Certificates <span className="text-xs font-normal text-gray-500">(all courses in this tenant)</span>
+          </h2>
           <form
             className="flex items-center gap-2"
             onSubmit={(e) => {

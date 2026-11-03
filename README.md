@@ -108,7 +108,9 @@ curl -s -H "X-Actor: alice@east.test" -H "Idempotency-Key: k1" -H "Content-Type:
 
 **A4 Learner outcomes** — the A2 response lists: Alex Lee `issued`, Priya Nair `issued`,
 Sam Chen `skipped / not_completed`, Jordan Kim and Maria Garcia `skipped / already_certified`.
-The UI bulk-issue panel shows the same table.
+The UI bulk-issue panel shows the same table. A learner whose certificate was **revoked** is
+reported as `skipped / certificate_revoked` and is *not* re-issued: one certificate per
+enrollment, and a revocation is a deliberate admin action that bulk issue must not silently undo.
 
 **A5 DST and local date**
 ```bash
@@ -165,6 +167,11 @@ In the UI: detail page → Revoke → confirm; the audit trail shows a single `c
 - Search is a `LIKE '%q%'` scan over the tenant's rows; fine at 100 k rows (<100 ms), would need
   FTS or a trigram index at a much larger scale.
 - Idempotency keys are never expired.
+- No re-issue after revocation. Bulk issue skips such learners with reason `certificate_revoked`;
+  an explicit, audited "re-issue" action would be the right follow-up and is out of scope.
+- The course dropdown scopes the bulk operation only; the certificate list always shows every
+  certificate in the tenant (search is by learner name or serial, as the brief specifies). There
+  is no course filter on the list.
 - The revoke confirmation is the browser's native `confirm()`; not a styled modal.
 - `GET /api/actors` lists both tenants' admin emails so the demo selector can work; this is the
   "no login" shortcut the brief allows and would not exist in production.
